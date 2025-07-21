@@ -24,7 +24,7 @@
   "incluye_tab": "Includes: Pickup and return to central hotels in Puno Professional bilingual guide (English\/Spanish) Comfortable covered boat transport on Lake Titicaca Entrance fees to the Uros Floating Islands Not Included: Meals and drinks (not included in this 3-hour tour) Personal expenses (optional) Traditional totora reed boat ride (approx. S\/20 per person) Additional surcharge for hotels outside downtown Puno",
   "precios_rango": "{\"desde\":[\"1\",\"2\"],\"hasta\":[\"1\",\"30\"],\"precio\":[\"39\",\"25.99\"]}",
   "url_servicio": "https://incalake.com/en/puno/uros-floating-islands-tour",
-  "prioridad": 2
+  "prioridad": 1
  },
  {
   "titulo_producto": "Group Tour to the Chullpas of Sillustani (4h)",
@@ -78,7 +78,7 @@
   "incluye_tab": "Included in the Uros Amantani Taquile 2 Days \/ 1 Night tour Tourist entrance fees to the islands . Professional guide in Spanish/english. Hotel-port-hotel transfers . Motorized tourist boat transport (launch) Puno–Uros–Amantani–Taquile–Puno . Basic accommodation in Amantani with 3 typical Andean meals: Lunch: variety of dishes with potato, rice, egg. Dinner on the first day Breakfast on the second day. Lunch on the second day in Taquile Not Included: Breakfast on the first day or dinner on the last day (outside the tour). Totora reed boat ride in Uros (optional, approx. $3 USD). Personal drinks and snacks (water, soft drinks). Personal expenses or any item not explicitly mentioned.",
   "precios_rango": "{\"desde\":[\"1\",\"2\"],\"hasta\":[\"1\",\"30\"],\"precio\":[\"79\",\"69\"]}",
   "url_servicio": "https://incalake.com/en/puno/tour-uros-amantani-taquile-2d1n",
-  "prioridad": 1
+  "prioridad": 2
  },
  {
   "titulo_producto": "Tour to Uros, Taquile and Sillustani in 1 day",
@@ -96,7 +96,7 @@
   "incluye_tab": "INCLUDED Entrances tickets for the three touristic islands Breakfast on Amantani Guide Spanish \/ English Transfers hotels in downtown Puno - Port - Hotel Motorboat Tourist lunch on the second day in Taquile Island: Soup: Soup Quinoa Main Course: Omelet or fried trout served with rice, fries, salad. Hot Drinks: Coca tea \/ muña",
   "precios_rango": "{\"desde\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\"],\"hasta\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"20\"],\"precio\":[\"359\",\"199\",\"195\",\"185\",\"179\",\"175\",\"169\",\"165\",\"159\",\"155\"]}",
   "url_servicio": "https://incalake.com/en/puno/full-day-tour-to-amantani-taquile-and-uros-islands",
-  "prioridad": 1
+  "prioridad": 2
  },
  {
   "titulo_producto": "Sleep on Taquile Island (2d1n)",
@@ -105,7 +105,7 @@
   "incluye_tab": "INCLUDED Transfer from downtown hotels to the port of Puno (round trip) Shared Transport Puno-Uros-Taquile-Puno Entrance fee to the Floating Island of the Uros. Entrance fee to Taquile Island Spanish \/ English guide for the group* 2 Lunches 1 dinner 1 breakfast Accomodation: (Host Family House) Cultural activities and dance demonstration Peña Show (Optional) DON'T INCLUDED Others that have not been mentioned Private guide for 2 days.",
   "precios_rango": "{\"desde\":[\"1\",\"2\"],\"hasta\":[\"1\",\"30\"],\"precio\":[\"169\",\"149\"]}",
   "url_servicio": "https://incalake.com/en/puno/titicaca-lodging-sleep-on-taquile-island",
-  "prioridad": 3
+  "prioridad": 2
  },
  {
   "titulo_producto": "Sleep on Taquile Island (3d2n tour)",
@@ -132,7 +132,7 @@
   "incluye_tab": "INCLUDE IT INCLUDES: Entrances fees Inca Uyo, Aramu Muru and Juli churches. Guide Spanish/english. Car transportation. Box Lunch. DOES NOT INCLUDE: Tips",
   "precios_rango": "{\"desde\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"9\",\"10\",\"13\"],\"hasta\":[\"1\",\"2\",\"3\",\"4\",\"8\",\"9\",\"12\",\"20\"],\"precio\":[\"175\",\"99\",\"90\",\"85\",\"80\",\"75\",\"70\",\"65\"]}",
   "url_servicio": "https://incalake.com/en/puno/tour-to-churches-juli-from-puno",
-  "prioridad": 3
+  "prioridad": 4
  },
  {
   "titulo_producto": "Tour Package From Puno To La Paz (Uros\/Taquile And Sun Island) 2 Days ",
@@ -141,7 +141,7 @@
   "incluye_tab": "1st Day: Includes Tour Uros and Taquile : Roundtrip transfers to the port. Group boat service. Typical lunch on Taquile Island. Bilingual guide (Spanish/english). Entrance tickets to Uros and Taquile Islands. 2nd Day: Includes Bus Tickets : Puno – Copacabana (ticket reservation and purchase, hotel-to-bus station transfer, and embarkation tax). Lunch in Copacabana . Tour Isla del Sol (Yumani, Southern Part) : Shared boat service Copacabana – Isla del Sol – Copacabana. Bilingual guide (Spanish/english) during the Isla del Sol tour. Entrance tickets to Isla del Sol. Bus Tickets : Copacabana – La Paz. Not Included Meals not specified in the program. Transfer to your hotel in La Paz (the service ends at the main bus terminal in La Paz). Accommodation in Puno and\/or La Paz. Additional Notes The bus service is provided by an external transportation company .",
   "precios_rango": "{\"desde\":[\"1\",\"2\"],\"hasta\":[\"1\",\"30\"],\"precio\":[\"259\",\"179\"]}",
   "url_servicio": "https://incalake.com/en/puno/tour-package-from-puno-to-lapaz-2d1n",
-  "prioridad": 3
+  "prioridad": 5
  },
  {
   "titulo_producto": "Tour From Puno To  Pucará (Full Day)",
@@ -150,7 +150,7 @@
   "incluye_tab": "INCLUDED: Entrances fees to Sillustani, Museum and Complex in Pucara, Lampa Church. English\/Spanish Guide (Request special guides Deustch\/Francais). Transport Puno-Sillustani-Lampa-Pucara-Puno. Andean Lunch. NOT INCLUDED Personal expenses",
   "precios_rango": "{\"desde\":[\"1\",\"2\",\"3\",\"5\",\"6\"],\"hasta\":[\"1\",\"2\",\"4\",\"5\",\"30\"],\"precio\":[\"199\",\"109\",\"105\",\"99\",\"95\"]}",
   "url_servicio": "https://incalake.com/en/puno/tour-from-puno-to-pucara",
-  "prioridad": 2
+  "prioridad": 3
  },
  {
   "titulo_producto": "Private Tour from Puno to Tinajani (1d)",
@@ -159,7 +159,7 @@
   "incluye_tab": "INCLUDED Private transportation Puno - Sillustani - Lampa - Pukara - Tinajani – Puno. Bilingual guide (Spanish/english). Entraces fees Sillustani. Entrances fees Lampa. Entrances fees Pukara. Entrances fees Tinajani. Box lunch: 1 bottle of ½ liter water ½. 1 Banana . 1 Manzana . 1 Sandwich of ham chicken. 1 Sandwich of edam cheese. Lemon candies. 1 bar of “sublime” chocolate. 1 pack of soda crackers . 1 Bag of snacks \"lays potatoes\". NOT INCLUDED Personal expenses",
   "precios_rango": "{\"desde\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"16\"],\"hasta\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"15\",\"30\"],\"precio\":[\"275\",\"145\",\"120\",\"119\",\"110\",\"99\",\"98\",\"97\"]}",
   "url_servicio": "https://incalake.com/en/puno/tour-from-puno-to-tinajani",
-  "prioridad": 2
+  "prioridad": 3
  },
  {
   "titulo_producto": "City Tour in Puno in Half Day",
@@ -186,7 +186,7 @@
   "incluye_tab": "INCLUDED Entrances fees Uros. Spanish/english local guide. Transfer hotels - Libertador's Port - hotels. Motor boat (Small motor boat). Cultural activities on Uros. NOT INCLUDED Personal expenses",
   "precios_rango": "{\"desde\":[\"1\",\"2\",\"3\",\"4\"],\"hasta\":[\"1\",\"2\",\"3\",\"20\"],\"precio\":[\"99\",\"65\",\"59\",\"49\"]}",
   "url_servicio": "https://incalake.com/en/puno/cultural-unique-tour-in-uros",
-  "prioridad": 2
+  "prioridad": 3
  },
  {
   "titulo_producto": "Sleep on Uros Island 2 days 1 night Tour",
@@ -337,7 +337,7 @@
   "incluye_tab": "Included on the tour: Pick up from hotels near Plaza Mayor (San Francisco Cathedral) and surrounding areas. Group bus transportation round trip La Paz-Copacabana – La Paz Group boat trip to Isla del Sol (approximately 40 pax) Local expert guide on the island. Tickets to Isla del Sol. Lunch in Copacabana. Not included: Breakfast, dinner at Copacabana, personal expenses, drinks at the restaurant and tips, transfer back to your hotel in La Paz Important note: For adventurers who wish to continue their trip, we offer an option to take a bus to Puno, arriving at 9 PM (Peruvian Time), add $30USD; Transfers available from downtown hotels in La Paz, near Plaza San Francisco.",
   "precios_rango": "{\"desde\":[\"1\",\"2\"],\"hasta\":[\"1\",\"20\"],\"precio\":[\"249\",\"149\"]}",
   "url_servicio": "https://incalake.com/en/la-paz/tour-to-sun-island-and-copacabana-from-la-paz-1d-2d",
-  "prioridad": 4
+  "prioridad":5
  },
  {
   "titulo_producto": "Tour to Copacabana and Sun Island 2 Day",
@@ -364,7 +364,7 @@
   "incluye_tab": "INCLUDED Pick up at hotel in Copacabana Shared and private boat Copacabana – Moon Island – Sun Island - Copacabana. English\/Spanish Speaking guide Meals (2 lunchs, 1 dinner, 1 breakfast) Basic lodging on Sun Island Entrances fees to Sun and Moon Island. DON'T INCLUDED Extra charges like drinks, handicrafts and Other expenses not mandatories",
   "precios_rango": "{\"desde\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\"],\"hasta\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"20\"],\"precio\":[\"349\",\"215\",\"195\",\"185\",\"175\",\"155\",\"145\"]}",
   "url_servicio": "https://incalake.com/en/copacabana/sun-island-tour-from-copacabana",
-  "prioridad": 2
+  "prioridad": 3
  },
  {
   "titulo_producto": "Private Tour La Paz Tiahuanaco Puno 1 Day. ",
@@ -391,7 +391,7 @@
   "incluye_tab": "INCLUDED TOur guide during the 2d 02 Lunchs (01 Isla Incahuasi , on Route 01 Lunch Day 2) 01 Dinners (01 Villa Candelaria) 01 night ( Hostel salt with private bathroom - Use of hot water up to 5 minutes) Entrance ticket to the San Cristobal Church.. Salt extraction activities. DON'T INCLUDED Others not mentioned above. Entrance fee to Isla Incahuasi (30.00 Pesos Bolivianos per person).",
   "precios_rango": "{\"desde\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"hasta\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"precio\":[\"699\",\"349\",\"329\",\"299\",\"279\",\"265\"]}",
   "url_servicio": "https://incalake.com/en/uyuni/private-tours-on-salt-flats",
-  "prioridad": 2
+  "prioridad": 3
  },
  {
   "titulo_producto": "Uyuni Salt Flat Tours 3 Day",
@@ -445,7 +445,7 @@
   "incluye_tab": "INCLUDES Shared transfers from downtown Puno Hotels – Port – downtown Puno Hotels. Shared motorized boat for 2 days . Private guide in Spanish \/ English or other languages for both days . Entrance fees to the Uros Floating Islands, Taquile, and Amantani . Basic accommodation on Amantani Island and 3 basic meals (Lunch, dinner on the first day, breakfast on the second day. NOTE: purely Andean food prepared with potatoes, rice, egg, quinoa soup, oca, etc. Mostly natural products from the area). Tourist lunch on the second day of the tour on Taquile Island . NOT INCLUDED Personal expenses",
   "precios_rango": "{\"desde\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"11\"],\"hasta\":[\"1\",\"2\",\"3\",\"4\",\"10\",\"20\"],\"precio\":[\"189\",\"129\",\"115\",\"110\",\"99\",\"95\"]}",
   "url_servicio": "https://incalake.com/en/puno/tour-uros-amantani-taquile-2d1n",
-  "prioridad": 2
+  "prioridad": 3
  },
  {
   "titulo_producto": "Private Tour to Amantani, Uros and Taquile in 2 Days",
@@ -625,7 +625,7 @@
   "incluye_tab": "Inclusions: Direct and convenient pick-up at Juliaca Airport . Exclusive private transportation: Airport – Sillustani – Puno . Expert bilingual private guide (English\/Spanish) All entrance fees to the Sillustani archaeological complex . Engaging guided visit within Sillustani . Heartfelt stop in the local community (Hatuncolla) Seamless transfer directly to your hotel in Puno . Exclusions: Food and drinks. Extra personal expenses (such as handicrafts or snacks).",
   "precios_rango": "{\"desde\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"11\"],\"hasta\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"10\",\"30\"],\"precio\":[\"85\",\"45\",\"39\",\"37\",\"35\",\"30\",\"29\"]}",
   "url_servicio": "https://incalake.com/en/puno/tour-chullpas-sillustani-puno",
-  "prioridad": 1
+  "prioridad": 2
  },
  {
   "titulo_producto": "Lampa & Sillustani Tour with Airport Drop-off in 6 Hours",
@@ -830,6 +830,6 @@
   "incluye_tab": "Inclusions: Bilingual Guide (Spanish/english) All food items mentioned in the program Exclusions: Transportation to the starting point (Pino Park)",
   "precios_rango": "{\"desde\":[\"1\",\"2\",\"3\",\"4\",\"5\"],\"hasta\":[\"1\",\"2\",\"3\",\"4\",\"21\"],\"precio\":[\"79.99\",\"49.99\",\"45.90\",\"43.90\",\"39.99\"]}",
   "url_servicio": "https://incalake.com/en/puno/food-tour-in-puno-city-lets-dinner-together",
-  "prioridad": 1
+  "prioridad": 2
  }
 ]

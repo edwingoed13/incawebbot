@@ -11,7 +11,8 @@ import re
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/chat": {"origins": "*"}}) 
+# Permitir CORS para todas las rutas
+CORS(app, resources={r"/*": {"origins": "*"}}) 
 
 # --- Configuración de Gemini ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -20,9 +21,8 @@ if not GEMINI_API_KEY:
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Usamos gemini-1.5-flash por su velocidad y ventana de contexto
 gemini_model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
+    model_name="gemini-1.5-flash",
     generation_config={
         "temperature": 0.6,
         "top_p": 0.95,      
@@ -36,6 +36,83 @@ gemini_model = genai.GenerativeModel(
         {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
     ]
 )
+
+# === Gestión de Sesiones basada en Archivos ===
+# Obtenemos la ruta absoluta del directorio donde se encuentra app.py
+basedir = os.path.abspath(os.path.dirname(__file__))
+# Creamos la ruta completa y segura para la carpeta de sesiones
+SESSIONS_DIR = os.path.join(basedir, "chat_sessions")
+
+# Verificar que la carpeta de sesiones existe y tiene permisos
+if not os.path.exists(SESSIONS_DIR):
+    try:
+        os.makedirs(SESSIONS_DIR)
+        print(f"✅ Directorio de sesiones creado en: {SESSIONS_DIR}")
+        # Dar permisos (Linux/Mac)
+        print(f"Sistema operativo: {os.name}")
+        if os.name != 'nt':  # Linux/Mac
+            os.chmod(SESSIONS_DIR, 0o755)  # Cambiar a 755 en lugar de 777
+        print("Permisos establecidos correctamente")
+    except Exception as e:
+        print(f"❌ Error crítico al crear directorio de sesiones: {e}")
+        raise
+
+# Verificar permisos de escritura
+try:
+    test_file = os.path.join(SESSIONS_DIR, 'test_permissions.txt')
+    with open(test_file, 'w') as f:
+        f.write('test')
+    os.remove(test_file)
+    print("✅ Permisos de escritura verificados correctamente")
+except Exception as e:
+    print(f"❌ Error de permisos en {SESSIONS_DIR}: {e}")
+    raise
+
+def load_session_history(session_id):
+    """Carga el historial de un archivo JSON."""
+    # Sanitizar el session_id para evitar problemas de path traversal
+    safe_session_id = re.sub(r'[^a-zA-Z0-9_-]', '', session_id)
+    filepath = os.path.join(SESSIONS_DIR, f"{safe_session_id}.json")
+    
+    print(f"🔍 Intentando cargar sesión desde: {filepath}")
+    
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                print(f"✅ Sesión cargada exitosamente: {len(data)} mensajes")
+                return data
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"⚠️ Error al leer archivo de sesión {session_id}: {e}")
+            return []
+    else:
+        print(f"ℹ️ Archivo de sesión no encontrado: {filepath}")
+        return []
+
+def save_session_history(session_id, history):
+    """Guarda el historial en un archivo JSON."""
+    # Sanitizar el session_id para evitar problemas de path traversal
+    safe_session_id = re.sub(r'[^a-zA-Z0-9_-]', '', session_id)
+    filepath = os.path.join(SESSIONS_DIR, f"{safe_session_id}.json")
+    
+    print(f"💾 Intentando guardar sesión en: {filepath}")
+    print(f"📝 Contenido a guardar: {json.dumps(history, indent=2)}")
+    
+        # AGREGAR ESTA VERIFICACIÓN:
+    try:
+        # Crear directorio si no existe
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        print(f"✅ Sesión guardada exitosamente: {filepath}")
+        return True
+    except IOError as e:
+        print(f"❌ Error grave al guardar sesión {session_id}: {e}")
+        print(f"Ruta absoluta intentada: {os.path.abspath(filepath)}")
+        print(f"Directorio padre existe: {os.path.exists(os.path.dirname(filepath))}")
+        print(f"Permisos de escritura: {os.access(os.path.dirname(filepath), os.W_OK)}")
+        return False
 
 # === Función para Cargar Tours ===
 def cargar_tours():
@@ -53,14 +130,16 @@ def cargar_tours():
         return [] 
 
 tours_data_loaded = cargar_tours()
-historial_global = {}
 MAX_HISTORY_TURNS = 5
 
 # === Nuevas funciones para detección de intención ===
-
 def detectar_intencion_consulta(pregunta, language='es'):
-    """Detecta si la pregunta es muy general o específica."""
+    """Detecta intención priorizando Puno/Titicaca como especialidad."""
     pregunta_lower = pregunta.lower()
+    
+    # Detectar mención de Puno/Titicaca (alta prioridad)
+    puno_keywords = ['puno', 'titicaca', 'uros', 'taquile', 'amantani', 'floating islands', 'islas flotantes']
+    menciona_puno = any(keyword in pregunta_lower for keyword in puno_keywords)
     
     # Patrones para preguntas muy generales
     patrones_generales = {
@@ -69,26 +148,27 @@ def detectar_intencion_consulta(pregunta, language='es'):
             r'\btours?\s+(disponibles?|que\s+tienen?)\b',
             r'\bqué\s+tours?\s+(hay|tienen|ofrecen)\b',
             r'\bque\s+actividades?\s+(hay|tienen|ofrecen)\b',
-            r'\bque\s+hacer\s+en\b',
-            r'\bturismo\s+en\b',
-            r'\bviajes?\s+a\b',
-            r'\bdestinos?\s+(disponibles?|que\s+tienen?)\b',
+            r'\bque\s+hacer\s+en\s+(perú|peru)\b',
+            r'\bturismo\s+en\s+(perú|peru)\b',
             r'^(hola|hello|buenos?\s+días?|buenas?\s+tardes?)',
-            r'\bpaquetes?\s+turísticos?\b'
+            r'\bpaquetes?\s+turísticos?\b',
+            r'\brecomendaciones?\b'
         ],
         'en': [
             r'\binfo\s+(about\s+)?tours?\b',
             r'\btours?\s+(available|you\s+have)\b',
             r'\bwhat\s+tours?\s+(do\s+you\s+have|are\s+available)\b',
             r'\bwhat\s+activities?\s+(do\s+you\s+have|are\s+available)\b',
-            r'\bwhat\s+to\s+do\s+in\b',
-            r'\btourism\s+in\b',
-            r'\btrips?\s+to\b',
-            r'\bdestinations?\s+(available|you\s+have)\b',
+            r'\bwhat\s+to\s+do\s+in\s+peru\b',
+            r'\btourism\s+in\s+peru\b',
             r'^(hi|hello|good\s+morning|good\s+afternoon)',
-            r'\btravel\s+packages?\b'
+            r'\btravel\s+packages?\b',
+            r'\brecommendations?\b'
         ]
     }
+    
+    if menciona_puno:
+        return 'specific_puno'
     
     for patron in patrones_generales.get(language, patrones_generales['es']):
         if re.search(patron, pregunta_lower):
@@ -100,11 +180,9 @@ def obtener_destinos_disponibles():
     """Extrae los destinos únicos de los tours disponibles."""
     destinos = set()
     for tour in tours_data_loaded:
-        # Extraer destino del título o tipo de servicio
         titulo = tour.get("titulo_producto", "").lower()
         tipo = tour.get("tipo_servicio", "").lower()
         
-        # Mapear destinos comunes
         if any(word in titulo + " " + tipo for word in ['puno', 'titicaca', 'uros', 'taquile', 'amantani']):
             destinos.add('Puno')
         if any(word in titulo + " " + tipo for word in ['cusco', 'machu picchu', 'sacred valley']):
@@ -113,8 +191,6 @@ def obtener_destinos_disponibles():
             destinos.add('Arequipa')
         if any(word in titulo + " " + tipo for word in ['uyuni', 'salar', 'bolivia']):
             destinos.add('Uyuni')
-        if any(word in titulo + " " + tipo for word in ['lima']):
-            destinos.add('Lima')
     
     return sorted(list(destinos))
 
@@ -143,63 +219,112 @@ LANGUAGE_CONFIGS = {
     'es': {
         'stopwords': {'de', 'a', 'el', 'la', 'los', 'las', 'un', 'una', 'y', 'o', 'pero', 'con', 'para', 'qué', 'quiero', 'tienes', 'hay', 'es'},
         'system_instruction': (
-            "Eres un asistente de viajes amigable y experto de IncaLake. Tu tarea es responder al usuario en ESPAÑOL.\n"
-            "IMPORTANTE: Analiza si la pregunta del usuario es GENERAL o ESPECÍFICA:\n\n"
-            "- Si es GENERAL (como 'info sobre tours', 'qué tours tienen', 'turismo en Perú'), responde de manera CONSULTIVA:\n"
-            "  * Saluda cordialmente\n"
-            "  * Menciona que tienes tours en varios destinos\n"
-            "  * Lista los destinos principales (Puno, Cusco, Arequipa, Uyuni, etc.)\n"
-            "  * Pregunta por cuál destino le gustaría más información\n"
-            "  * NO des detalles específicos de tours todavía\n\n"
-            "- Si es ESPECÍFICA (menciona destinos, actividades concretas, fechas), usa la información de 'Relevant Tour Information' para dar detalles completos.\n"
-            "- Cuando menciones un tour específico, SIEMPRE incluye su 'More Info URL'.\n"
-            "- Para reservas, dirige al usuario a WhatsApp +51982769453.\n"
-            "- Mantén un tono amigable y profesional siempre."
+            "Eres un asistente de viajes especializado de IncaLake, una agencia peruana experta en Puno y Lago Titicaca. 🏔️ Utiliza emojis para hacer la conversación más amena.\n\n"
+            "🎯 ESPECIALIZACIÓN DE INCALAKE:\n"
+            "1. DESTINO PRINCIPAL: Puno y Lago Titicaca (nuestra especialidad) 🌊\n"
+            "2. Destinos secundarios: Bolivia, Arequipa, Cusco\n"
+            "3. Siempre prioriza tours con 'prioridad' más baja (1 = máxima prioridad, 5 = mínima)\n"
+            "4. Para experiencias auténticas, sugiere homestays o tours de 2d1n\n\n"
+            "📝 FLUJO DE CONVERSACIÓN:\n"
+            "- Los datos de contacto ya fueron recolectados previamente ✅\n"
+            "- Para consultas GENERALES, pregunta: '¿Para qué fecha planeas viajar y cuántas personas van?' 🗓️👥\n"
+            "- Para consultas ESPECÍFICAS, usa 'Relevant Tour Information' y luego consulta fecha/personas si es necesario\n"
+            "- SIEMPRE recomienda Puno/Titicaca como primera opción cuando sea relevante\n\n"
+            "🌊 INFORMACIÓN CLAVE DE PUNO:\n"
+            "- Lago Titicaca: 3,812 msnm - Recomendamos 1 día de aclimatación en Puno\n"
+            "- Menciona nuestras islas especializadas: Uros, Taquile, Amantani\n"
+            "- Destaca experiencias únicas como homestays con familias locales\n\n"
+            "💰 PRESENTACIÓN DE TOURS:\n"
+            "- SIEMPRE incluye URL clickeable: [Ver más información](URL_COMPLETA)\n"
+            "- Consulta 'Prices (per person)' para rangos exactos\n"
+            "- Máximo 3 párrafos, sé conciso y directo\n"
+            "- Formato: título, descripción breve, precios, URL clickeable\n\n"
+            "🚀 PROCESO DE RESERVA:\n"
+            "Para reservar, comparte la URL clickeable e indica:\n"
+            "1️⃣ Seleccionar fecha del tour\n"
+            "2️⃣ Elegir hora de inicio\n"
+            "3️⃣ Indicar número de personas\n"
+            "4️⃣ Presionar 'Comprar' y completar pago\n"
+            "⚠️ Si hay algún percance o la opción 'Comprar' no funciona, contactar WhatsApp +51982769453\n\n"
+            "❓ CONSULTAS ESPECIALES:\n"
+            "Para reservas existentes, documentos sensibles o consultas complejas:\n"
+            "'Para este tipo de consulta tan específica, uno de mis compañeros humanos te ayudará. En breve se pondrán en contacto contigo. Si prefieres, puedes escribirnos directamente a nuestro WhatsApp +51982769453 para una atención inmediata.' 📞\n\n"
+            "🌐 Para recomendaciones generales, usa información del blog incalake.com/blog\n"
+            "⚠️ NUNCA redirijas a otras agencias de viajes"
         ),
-        'greeting': "¡Hola! Soy tu asistente de IncaLake. ¿En qué te puedo ayudar hoy?",
-        'error_message': "Lo siento, ocurrió un error en el servidor. Por favor, intenta más tarde.",
-        'no_tours_message': "No se encontró información de tours relevante para esta consulta.",
+        'greeting': "¡Hola! 👋 Soy tu asistente especializado de IncaLake. ¿En qué aventura por Puno y el Lago Titicaca te puedo ayudar hoy? 🌊✨",
+        'error_message': "Lo siento, ocurrió un error en el servidor. Por favor, intenta más tarde o contáctanos al +51982769453 😔",
+        'no_tours_message': "No encontré información específica para esa consulta, pero puedo ayudarte con nuestros tours en Puno y Lago Titicaca 🌊",
         'general_response_template': (
-            "¡Perfecto! En IncaLake tenemos tours increíbles en varios destinos del sur de Perú y Bolivia:\n\n"
-            "🏔️ **Puno**: Tours al Lago Titicaca, Islas Flotantes de los Uros, Taquile y Amantani\n"
-            "🏛️ **Cusco**: Machu Picchu, Valle Sagrado y tours arqueológicos\n"
-            "🌋 **Arequipa**: Cañón del Colca y tours de aventura\n"
-            "🧂 **Uyuni**: Salar de Uyuni y tours por el desierto boliviano\n\n"
-            "¿Te gustaría que te cuente más sobre tours en algún destino específico? 😊"
-        )
+            "¡Perfecto! 🎉 Como especialistas en Puno y Lago Titicaca, tenemos las mejores experiencias:\n\n"
+            "🌊 **PUNO - LAGO TITICACA** (Nuestra especialidad):\n"
+            "• Islas Flotantes de los Uros - Experiencia única en totora 🛶\n"
+            "• Isla Taquile - Cultura viva y textilería ancestral 🧵\n"
+            "• Isla Amantani - Homestays auténticos con familias locales 🏠\n"
+            "• Tours de 2d1n para experiencias completas\n"
+            "*Altitud: 3,812 msnm - Recomendamos 1 día de aclimatación*\n\n"
+            "🌟 **Otros destinos disponibles**:\n"
+            "🧂 Bolivia: Salar de Uyuni | 🌋 Arequipa: Cañón del Colca | 🏛️ Cusco: Machu Picchu\n\n"
+            "Para recomendarte la experiencia perfecta: **¿Para qué fecha planeas viajar y cuántas personas van?** 📅👥"
+        ),
+        'puno_priority_message': "🌊 Como especialistas en Puno y Lago Titicaca, te recomiendo especialmente nuestros tours a las islas. ¿Te interesan las experiencias en Uros, Taquile o Amantani?"
     },
     'en': {
         'stopwords': {'the', 'a', 'an', 'and', 'or', 'but', 'with', 'for', 'what', 'want', 'have', 'is', 'are', 'to', 'of', 'in', 'on', 'at'},
         'system_instruction': (
-            "You are a friendly and expert travel assistant for IncaLake. Your task is to answer the user in ENGLISH.\n"
-            "IMPORTANT: Analyze if the user's question is GENERAL or SPECIFIC:\n\n"
-            "- If it's GENERAL (like 'info about tours', 'what tours do you have', 'tourism in Peru'), respond CONSULTATIVELY:\n"
-            "  * Greet cordially\n"
-            "  * Mention that you have tours in several destinations\n"
-            "  * List the main destinations (Puno, Cusco, Arequipa, Uyuni, etc.)\n"
-            "  * Ask which destination they'd like more information about\n"
-            "  * DON'T give specific tour details yet\n\n"
-            "- If it's SPECIFIC (mentions destinations, concrete activities, dates), use the 'Relevant Tour Information' to give complete details.\n"
-            "- When mentioning a specific tour, ALWAYS include its 'More Info URL'.\n"
-            "- For reservations, refer to WhatsApp +51982769453.\n"
-            "- Always maintain a friendly and professional tone."
+            "You are a specialized travel assistant for IncaLake, a Peruvian agency expert in Puno and Lake Titicaca. 🏔️ Use emojis to make conversations more enjoyable.\n\n"
+            "🎯 INCALAKE SPECIALIZATION:\n"
+            "1. MAIN DESTINATION: Puno and Lake Titicaca (our specialty) 🌊\n"
+            "2. Secondary destinations: Bolivia, Arequipa, Cusco\n"
+            "3. Always prioritize tours with lower 'priority' numbers (1 = highest priority, 5 = lowest)\n"
+            "4. For authentic experiences, suggest homestays or 2d1n tours\n\n"
+            "📝 CONVERSATION FLOW:\n"
+            "- Contact information was already collected previously ✅\n"
+            "- For GENERAL queries, ask: 'What date are you planning to travel and how many people are going?' 🗓️👥\n"
+            "- For SPECIFIC queries, use 'Relevant Tour Information' then ask for date/people if needed\n"
+            "- ALWAYS recommend Puno/Titicaca as first option when relevant\n\n"
+            "🌊 KEY PUNO INFORMATION:\n"
+            "- Lake Titicaca: 3,812 masl - We recommend 1 day acclimatization in Puno\n"
+            "- Mention our specialized islands: Uros, Taquile, Amantani\n"
+            "- Highlight unique experiences like homestays with local families\n\n"
+            "💰 TOUR PRESENTATION:\n"
+            "- ALWAYS include clickable URL: [More information](COMPLETE_URL)\n"
+            "- Check 'Prices (per person)' for exact ranges\n"
+            "- Maximum 3 paragraphs, be concise and direct\n"
+            "- Format: title, brief description, prices, clickable URL\n\n"
+            "🚀 BOOKING PROCESS:\n"
+            "To book, share clickable URL and indicate:\n"
+            "1️⃣ Select tour date\n"
+            "2️⃣ Choose start time\n"
+            "3️⃣ Indicate number of people\n"
+            "4️⃣ Press 'Buy' and complete payment\n"
+            "⚠️ If there's any issue or 'Buy' option doesn't work, contact WhatsApp +51982769453\n\n"
+            "❓ SPECIAL QUERIES:\n"
+            "For existing bookings, sensitive documents or complex queries:\n"
+            "'For this specific type of query, one of my human colleagues will help you. They will contact you shortly. If you prefer, you can write directly to our WhatsApp +51982769453 for immediate assistance.' 📞\n\n"
+            "🌐 For general recommendations, use information from incalake.com/blog\n"
+            "⚠️ NEVER redirect to other travel agencies"
         ),
-        'greeting': "Hello! I'm your IncaLake assistant. How can I help you today?",
-        'error_message': "Sorry, a server error occurred. Please try again later.",
-        'no_tours_message': "No relevant tour information found for this query.",
+        'greeting': "Hello! 👋 I'm your specialized IncaLake assistant. What Puno and Lake Titicaca adventure can I help you with today? 🌊✨",
+        'error_message': "Sorry, a server error occurred. Please try again later or contact us at +51982769453 😔",
+        'no_tours_message': "I couldn't find specific information for that query, but I can help you with our Puno and Lake Titicaca tours 🌊",
         'general_response_template': (
-            "Perfect! At IncaLake we have amazing tours in several destinations in southern Peru and Bolivia:\n\n"
-            "🏔️ **Puno**: Lake Titicaca tours, Floating Islands of Uros, Taquile and Amantani\n"
-            "🏛️ **Cusco**: Machu Picchu, Sacred Valley and archaeological tours\n"
-            "🌋 **Arequipa**: Colca Canyon and adventure tours\n"
-            "🧂 **Uyuni**: Uyuni Salt Flats and Bolivian desert tours\n\n"
-            "Would you like me to tell you more about tours in any specific destination? 😊"
-        )
+            "Perfect! 🎉 As specialists in Puno and Lake Titicaca, we have the best experiences:\n\n"
+            "🌊 **PUNO - LAKE TITICACA** (Our specialty):\n"
+            "• Floating Islands of Uros - Unique totora reed experience 🛶\n"
+            "• Taquile Island - Living culture and ancestral textiles 🧵\n"
+            "• Amantani Island - Authentic homestays with local families 🏠\n"
+            "• 2d1n tours for complete experiences\n"
+            "*Altitude: 3,812 masl - We recommend 1 day acclimatization*\n\n"
+            "🌟 **Other available destinations**:\n"
+            "🧂 Bolivia: Uyuni Salt Flats | 🌋 Arequipa: Colca Canyon | 🏛️ Cusco: Machu Picchu\n\n"
+            "To recommend the perfect experience: **What date are you planning to travel and how many people are going?** 📅👥"
+        ),
+        'puno_priority_message': "🌊 As specialists in Puno and Lake Titicaca, I especially recommend our island tours. Are you interested in experiences at Uros, Taquile or Amantani?"
     }
 }
 
 # === Funciones de Búsqueda y Traducción Contextual ===
-
 def obtener_keywords_contextuales(historial, pregunta_actual, language='es'):
     """Extrae palabras clave del contexto de la conversación según el idioma."""
     texto_a_procesar = pregunta_actual.lower()
@@ -232,8 +357,8 @@ def traducir_keywords_a_ingles(keywords, source_language='es'):
         print(f"❌ Error en la traducción de keywords: {e}")
         return keywords
 
-def buscar_tours_relevantes(keywords_en):
-    """Busca en el JSON usando las palabras clave en inglés."""
+def buscar_tours_relevantes(keywords_en, intencion='specific'):
+    """Busca tours priorizando Puno/Titicaca según la especialización."""
     if not keywords_en: 
         return []
     
@@ -246,28 +371,39 @@ def buscar_tours_relevantes(keywords_en):
             tour.get("descripcion_tab", "")
         ).lower()
         
+        puno_bonus = 0
+        if any(keyword in texto_busqueda for keyword in ['puno', 'titicaca', 'uros', 'taquile', 'amantani']):
+            puno_bonus = 10 
+        
         for keyword in keywords_en:
             if keyword in texto_busqueda:
                 score += 5 if keyword in tour.get("titulo_producto", "").lower() else 1
         
-        if score > 0:
+        if score > 0 or puno_bonus > 0:
+            score += puno_bonus
             score += (6 - tour.get("prioridad", 5))
             scored_tours.append((score, tour))
     
     scored_tours.sort(key=lambda x: x[0], reverse=True)
+    
+    if intencion == 'specific_puno':
+        puno_tours = [tour for score, tour in scored_tours if score >= 10] 
+        return puno_tours[:3] if puno_tours else [tour for score, tour in scored_tours[:2]]
+    
     return [tour for score, tour in scored_tours[:3]]
 
 def formatear_contexto_detallado(tours, language='es'):
-    """Crea un resumen detallado y bien formateado de los tours para el prompt."""
+    """Formatea tours con URLs clickeables y prioridad visible."""
     if not tours: 
         return LANGUAGE_CONFIGS[language]['no_tours_message']
     
-    resumen_partes = ["--- Relevant Tour Information (Data in English) ---"]
+    resumen_partes = ["--- Relevant Tour Information ---"]
     for tour in tours:
         titulo = tour.get("titulo_producto", "No title")
         descripcion = tour.get("descripcion_tab", "No description")
         itinerario = tour.get("itinerario_ta", "No itinerary provided.")
-        url = tour.get("url_servicio", "No URL available.")
+        url = tour.get("url_servicio", "")
+        prioridad = tour.get("prioridad", 5)
         
         precios_formateados = "Price on request."
         try:
@@ -277,47 +413,58 @@ def formatear_contexto_detallado(tours, language='es'):
                     f"For {d}-{h} people: ${p} USD" 
                     for d, h, p in zip(precios["desde"], precios["hasta"], precios["precio"])
                 ]
-                precios_formateados = "\n".join(price_entries)
+                precios_formateados = " | ".join(price_entries)
         except (json.JSONDecodeError, TypeError):
             pass
-
+        
+        es_puno = any(keyword in titulo.lower() + descripcion.lower() for keyword in ['puno', 'titicaca', 'uros', 'taquile', 'amantani'])
+        especialidad_nota = " ⭐ (NUESTRA ESPECIALIDAD)" if es_puno else ""
+        
         resumen_partes.append(
-            f"\nTour: {titulo}\n"
+            f"\n🎯 Tour: {titulo}{especialidad_nota}\n"
+            f"Priority: {prioridad}/5 (1=highest priority)\n"
             f"Description: {descripcion}\n"
-            f"Itinerary Summary: {itinerario[:200]}{'...' if len(itinerario) > 200 else ''}\n"
-            f"Prices: {precios_formateados}\n"
-            f"More Info URL: {url}"
+            f"Brief Itinerary: {itinerario[:150]}{'...' if len(itinerario) > 150 else ''}\n"
+            f"Prices per person: {precios_formateados}\n"
+            f"Booking URL: {url}\n"
+            f"IMPORTANT: Make URL clickable as: [Ver más información]({url}) (Spanish) or [More information]({url}) (English)"
         )
     
     return "\n".join(resumen_partes)
 
 def construir_historial_gemini(historial_previo, instruccion_principal, contexto_detallado, pregunta_actual, language='es', intencion='specific'):
-    """Construye el historial completo para enviar a Gemini."""
+    """Construye historial optimizado para especialización en Puno."""
     historial_para_gemini = []
     
-    # Añadir instrucción principal como contexto del sistema
     historial_para_gemini.append({
         "role": "user", 
         "parts": [instruccion_principal]
     })
     
-    # Añadir saludo inicial del bot
-    historial_para_gemini.append({
-        "role": "model", 
-        "parts": [LANGUAGE_CONFIGS[language]['greeting']]
-    })
+    es_primera_interaccion = len(historial_previo) == 0
     
-    # Añadir historial previo
+    if es_primera_interaccion:
+        historial_para_gemini.append({
+            "role": "model", 
+            "parts": [LANGUAGE_CONFIGS[language]['greeting']]
+        })
+    else:
+        historial_para_gemini.append({
+            "role": "model", 
+            "parts": ["¡Hola de nuevo! ¿En qué más te puedo ayudar? 😊" if language == 'es' else "Hello again! How else can I help you? 😊"]
+        })
+    
     historial_para_gemini.extend(historial_previo)
     
-    # Construir prompt según la intención
-    if intencion == 'general':
-        # Para consultas generales, no necesitamos contexto detallado
+    if intencion == 'general' and es_primera_interaccion:
         destinos = obtener_destinos_disponibles()
-        prompt_actual = f"CONSULTA GENERAL DETECTADA. Destinos disponibles: {', '.join(destinos)}\n\nUser Question: {pregunta_actual}"
+        prompt_actual = f"CONSULTA GENERAL - PRIMERA INTERACCIÓN. Especialidad: Puno/Titicaca. Otros destinos: {', '.join(destinos)}. Necesita consultar fecha y número de personas.\n\nUser Question: {pregunta_actual}"
+    elif intencion == 'specific_puno':
+        prompt_actual = f"CONSULTA ESPECÍFICA SOBRE PUNO/TITICACA (nuestra especialidad) 🌊:\n{contexto_detallado}\n\nRecuerda mencionar nuestra experiencia especializada en esta región.\n\nUser Question: {pregunta_actual}"
+    elif intencion == 'specific':
+        prompt_actual = f"{contexto_detallado}\n\nSi es relevante, menciona también nuestros tours especialidad en Puno/Titicaca.\n\nUser Question: {pregunta_actual}"
     else:
-        # Para consultas específicas, incluir contexto detallado
-        prompt_actual = f"{contexto_detallado}\n\nUser Question: {pregunta_actual}"
+        prompt_actual = f"Consulta general. Recuerda que somos especialistas en Puno/Titicaca. Necesita fecha y número de personas.\n\nUser Question: {pregunta_actual}"
     
     historial_para_gemini.append({
         "role": "user", 
@@ -327,12 +474,9 @@ def construir_historial_gemini(historial_previo, instruccion_principal, contexto
     return historial_para_gemini
 
 # === Ruta Principal del Chat ===
-
-@app.route('/chat', methods=['POST', 'OPTIONS'])
+# === Ruta Principal del Chat CORREGIDA ===
+@app.route('/chat', methods=['POST'])
 def chat():
-    if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'}), 200
-
     try:
         data = request.get_json()
         if not data:
@@ -345,50 +489,38 @@ def chat():
         if language not in LANGUAGE_CONFIGS:
             language = 'es'
             
-        print(f"🌍 Idioma detectado: {language}")
-        print(f"💬 Pregunta: {pregunta}")
+        print(f"\n--- Nueva Petición ---")
+        print(f"ID de Sesión: {session_id}")
+        print(f"Idioma: {language}")
+        print(f"Pregunta: {pregunta}")
 
         if not pregunta:
             return jsonify({"error": "El mensaje no puede estar vacío."}), 400
 
-        # 1. Obtener historial
-        historial = historial_global.get(session_id, [])
-
-        # 2. Detectar intención de la consulta
+        # MOVER ESTA LÍNEA ANTES DE LA FUNCIÓN stream_response()
+        historial = load_session_history(session_id)
         intencion = detectar_intencion_consulta(pregunta, language)
-        print(f"🎯 Intención detectada: {intencion}")
+        print(f"Intención Detectada: {intencion}")
 
-        # 3. Procesar según la intención
-        if intencion == 'general':
-            # Para consultas generales, no buscar tours específicos
-            tours_relevantes = []
-            contexto_detallado = ""
-        else:
-            # Para consultas específicas, buscar tours relevantes
+        contexto_detallado = ""
+        if intencion != 'general':
             keywords = obtener_keywords_contextuales(historial, pregunta, language)
             keywords_en = traducir_keywords_a_ingles(keywords, language)
             tours_relevantes = buscar_tours_relevantes(keywords_en)
             contexto_detallado = formatear_contexto_detallado(tours_relevantes, language)
-        
-        # 4. Obtener configuración del idioma
+
         config = LANGUAGE_CONFIGS[language]
-        
-        # 5. Construir historial para Gemini
         historial_para_gemini = construir_historial_gemini(
-            historial, 
-            config['system_instruction'], 
-            contexto_detallado, 
-            pregunta, 
-            language,
-            intencion
+            historial, config['system_instruction'], contexto_detallado, pregunta, language, intencion
         )
 
         def stream_response():
+            # USAR nonlocal PARA ACCEDER A LA VARIABLE DEL SCOPE EXTERIOR
+            nonlocal historial
             respuesta_completa = ""
             try:
                 response_stream = gemini_model.generate_content(
-                    historial_para_gemini,
-                    stream=True
+                    historial_para_gemini, stream=True
                 )
                 
                 for chunk in response_stream:
@@ -397,60 +529,61 @@ def chat():
                         yield chunk.text
                         time.sleep(0.01)
                 
-                # Actualizar historial global
-                current_historial = historial_global.get(session_id, [])
-                current_historial.append({"role": "user", "parts": [pregunta]})
-                current_historial.append({"role": "model", "parts": [respuesta_completa]})
+                # Actualizar y guardar historial en archivo
+                historial.append({"role": "user", "parts": [pregunta]})
+                historial.append({"role": "model", "parts": [respuesta_completa]})
                 
-                if len(current_historial) > MAX_HISTORY_TURNS * 2:
-                    current_historial = current_historial[-(MAX_HISTORY_TURNS * 2):]
+                if len(historial) > MAX_HISTORY_TURNS * 2:
+                    historial = historial[-(MAX_HISTORY_TURNS * 2):]
                 
-                historial_global[session_id] = current_historial
-                print(f"✅ Historial actualizado para sesión {session_id}")
+                save_session_history(session_id, historial)
+                print(f"✅ Historial guardado para sesión {session_id}")
 
             except Exception as e:
                 print(f"❌ Error al generar respuesta de Gemini: {e}")
                 yield config['error_message']
 
-        return Response(stream_response(), mimetype='text/plain')
+        return Response(stream_response(), mimetype='text/event-stream')
     
     except Exception as e:
         print(f"❌ Error general en /chat: {e}")
         return jsonify({"error": "Error interno del servidor"}), 500
 
-# === Rutas adicionales ===
-
-@app.route('/session/<session_id>', methods=['GET'])
-def get_session_info(session_id):
-    """Obtiene información de una sesión específica."""
-    historial = historial_global.get(session_id, [])
+# === Rutas Adicionales ===
+@app.route('/session/<session_id>/history', methods=['GET'])
+def get_session_history(session_id):
+    """Obtiene el historial de chat de una sesión desde su archivo."""
+    historial = load_session_history(session_id)
+    
     return jsonify({
         "session_id": session_id,
-        "messages_count": len(historial),
-        "last_activity": time.time() if historial else None
+        "historial": historial if historial else [],
+        "message": "Historial cargado exitosamente" if historial else "Nueva sesión sin historial previo"
     })
 
 @app.route('/session/<session_id>/clear', methods=['POST'])
 def clear_session(session_id):
-    """Limpia el historial de una sesión específica."""
-    if session_id in historial_global:
-        del historial_global[session_id]
-        return jsonify({"message": f"Historial de sesión {session_id} limpiado."})
+    """Limpia el historial de una sesión eliminando su archivo."""
+    safe_session_id = re.sub(r'[^a-zA-Z0-9_-]', '', session_id)
+    filepath = os.path.join(SESSIONS_DIR, f"{safe_session_id}.json")
+    if os.path.exists(filepath):
+        try:
+            os.remove(filepath)
+            print(f"🗑️ Historial de sesión {session_id} limpiado.")
+            return jsonify({"message": f"Historial de sesión {session_id} limpiado."})
+        except OSError as e:
+            print(f"❌ Error limpiando sesión {session_id}: {e}")
+            return jsonify({"error": "No se pudo limpiar la sesión"}), 500
     return jsonify({"message": "Sesión no encontrada."}), 404
 
 @app.route('/destinations', methods=['GET'])
 def get_destinations():
     """Endpoint para obtener destinos disponibles."""
     destinos = obtener_destinos_disponibles()
-    destinos_con_conteo = []
-    
-    for destino in destinos:
-        count = contar_tours_por_destino(destino)
-        destinos_con_conteo.append({
-            "destination": destino,
-            "tour_count": count
-        })
-    
+    destinos_con_conteo = [
+        {"destination": destino, "tour_count": contar_tours_por_destino(destino)}
+        for destino in destinos
+    ]
     return jsonify({
         "destinations": destinos_con_conteo,
         "total_destinations": len(destinos)
@@ -460,20 +593,8 @@ def get_destinations():
 def index():
     return jsonify({
         "message": "API de IncaLake Chatbot funcionando",
-        "version": "2.1",
-        "supported_languages": list(LANGUAGE_CONFIGS.keys()),
-        "features": [
-            "Detección de intención consultiva",
-            "Respuestas graduales según especificidad",
-            "Soporte multiidioma",
-            "Gestión de sesiones"
-        ],
-        "endpoints": {
-            "chat": "/chat",
-            "session_info": "/session/<session_id>",
-            "clear_session": "/session/<session_id>/clear",
-            "destinations": "/destinations"
-        }
+        "version": "2.2-persistent",
+        "active_sessions_files": len(os.listdir(SESSIONS_DIR)),
     })
 
 @app.route('/health')
@@ -483,8 +604,7 @@ def health_check():
         "status": "healthy",
         "timestamp": time.time(),
         "tours_loaded": len(tours_data_loaded),
-        "active_sessions": len(historial_global),
-        "destinations_available": len(obtener_destinos_disponibles())
+        "active_sessions_files": len(os.listdir(SESSIONS_DIR)),
     })
 
 if __name__ == '__main__':
@@ -492,4 +612,9 @@ if __name__ == '__main__':
     print(f"📚 Tours cargados: {len(tours_data_loaded)}")
     print(f"🌍 Idiomas soportados: {list(LANGUAGE_CONFIGS.keys())}")
     print(f"🎯 Destinos disponibles: {obtener_destinos_disponibles()}")
+    print(f"📂 Directorio de sesiones: '{SESSIONS_DIR}'")
+    print(f"📂 Directorio de trabajo: {os.getcwd()}")
+    print(f"📁 Directorio de sesiones: {SESSIONS_DIR}")
+    print(f"📁 Directorio existe: {os.path.exists(SESSIONS_DIR)}")
+    print(f"📁 Permisos de escritura: {os.access(SESSIONS_DIR, os.W_OK) if os.path.exists(SESSIONS_DIR) else 'N/A'}")
     app.run(debug=True, host='0.0.0.0', port=int(os.getenv("PORT", 5000)))
