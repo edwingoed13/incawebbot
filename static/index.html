@@ -673,6 +673,12 @@
     font-size: clamp(12px, 2.5vw, 13px);
 }
 
+@media (max-width: 768px) {
+    .widget-button.hide-on-mobile {
+        display: none !important;
+    }
+}
+
 /* === ANIMACIONES === */
 @keyframes bounce {
     0%, 20%, 50%, 80%, 100% {
@@ -938,33 +944,44 @@
 
     // === FUNCIONES DEL CHAT ===
     function toggleWidget() {
-        const container = document.getElementById('widget-container');
-        const button = document.querySelector('.widget-button');
+    const container = document.getElementById('widget-container');
+    const button = document.querySelector('.widget-button');
 
-        if (!isWidgetOpen) {
-            container.classList.add('show');
-            button.classList.add('open');
-            button.classList.remove('notification');
-            isWidgetOpen = true;
+    if (!isWidgetOpen) {
+        container.classList.add('show');
+        button.classList.add('open');
+        button.classList.remove('notification');
+        isWidgetOpen = true;
 
-            if (!chatInitialized) {
-                initializeChat();
-                chatInitialized = true;
-            }
-
-            setTimeout(() => focusInput(), 300);
-        } else {
-            closeWidget();
+        // ⬇️ Ocultar botón en móviles
+        if (window.innerWidth <= 768) {
+            button.classList.add('hide-on-mobile');
         }
+
+        if (!chatInitialized) {
+            initializeChat();
+            chatInitialized = true;
+        }
+
+        setTimeout(() => focusInput(), 300);
+    } else {
+        closeWidget();
     }
+}
 
     function closeWidget() {
-        const container = document.getElementById('widget-container');
-        const button = document.querySelector('.widget-button');
-        container.classList.remove('show');
-        button.classList.remove('open');
-        isWidgetOpen = false;
+    const container = document.getElementById('widget-container');
+    const button = document.querySelector('.widget-button');
+    container.classList.remove('show');
+    button.classList.remove('open');
+    isWidgetOpen = false;
+
+    // ⬇️ Volver a mostrar botón en móviles
+    if (window.innerWidth <= 768) {
+        button.classList.remove('hide-on-mobile');
     }
+}
+
 
     function focusInput() {
         const container = document.getElementById('widget-container');
